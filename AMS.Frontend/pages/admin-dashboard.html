@@ -4,13 +4,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AMS - Admin Dashboard</title>
+    <title>AMS - Admin Full Control</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
         body {
             display: flex;
             min-height: 100vh;
-            overflow-x: hidden;
+            background-color: #f8f9fa;
         }
 
         .sidebar {
@@ -25,6 +25,7 @@
             text-decoration: none;
             padding: 15px;
             display: block;
+            border-bottom: 1px solid #343a40;
         }
 
         .sidebar a:hover {
@@ -35,46 +36,151 @@
             flex-grow: 1;
             padding: 20px;
         }
+
+        .nav-tabs .nav-link {
+            cursor: pointer;
+        }
+
+        .tab-content {
+            background: white;
+            padding: 20px;
+            border: 1px solid #dee2e6;
+            border-top: none;
+        }
     </style>
 </head>
 
 <body>
 
-    <div class="sidebar d-flex flex-column p-3">
-        <h3>AMS Admin</h3>
-        <hr>
-        <a href="#">Manage Sessions</a>
-        <a href="#">Manage Courses (Coming Soon)</a>
-        <a href="#">Manage Students (Coming Soon)</a>
-        <hr>
-        <button onclick="logout()" class="btn btn-danger w-100 mt-auto">Logout</button>
+    <div class="sidebar d-flex flex-column">
+        <h3 class="p-3">AMS Admin</h3>
+        <a href="#" onclick="showTab('users')">1. Manage Users</a>
+        <a href="#" onclick="showTab('sessions')">2. Academic Sessions</a>
+        <a href="#" onclick="showTab('courses')">3. Courses</a>
+        <a href="#" onclick="showTab('sections')">4. Sections</a>
+        <a href="#" onclick="showTab('assignments')">5. Assignments</a>
+        <button onclick="logout()" class="btn btn-danger m-3 mt-auto">Logout</button>
     </div>
 
     <div class="content">
-        <h2>Academic Sessions</h2>
+        <h2 id="pageTitle">Manage Users</h2>
+        <div id="statusMessage" class="alert" style="display: none;"></div>
 
-        <div class="card p-3 mb-4">
-            <h5>Create New Session</h5>
-            <form id="createSessionForm">
-                <div class="row">
-                    <div class="col-md-4">
-                        <input type="text" id="sessionName" class="form-control"
-                            placeholder="Session Name (e.g. Fall 2026)" required>
-                    </div>
-                    <div class="col-md-3">
-                        <input type="date" id="startDate" class="form-control" required>
-                    </div>
-                    <div class="col-md-3">
-                        <input type="date" id="endDate" class="form-control" required>
-                    </div>
-                    <div class="col-md-2">
-                        <button type="submit" class="btn btn-success w-100">Create</button>
-                    </div>
+        <div id="tab-users" class="tab-pane">
+            <h4>Register New User</h4>
+            <form id="registerForm" class="row g-3">
+                <div class="col-md-4">
+                    <input type="text" id="regName" class="form-control" placeholder="Full Name" required>
+                </div>
+                <div class="col-md-4">
+                    <input type="email" id="regEmail" class="form-control" placeholder="Email" required>
+                </div>
+                <div class="col-md-4">
+                    <input type="password" id="regPassword" class="form-control" placeholder="Password" required>
+                </div>
+                <div class="col-md-4">
+                    <select id="regRole" class="form-select">
+                        <option value="Student">Student</option>
+                        <option value="Teacher">Teacher</option>
+                        <option value="Admin">Admin</option>
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <button type="submit" class="btn btn-primary w-100">Register User</button>
                 </div>
             </form>
         </div>
 
-        <div id="statusMessage" class="alert alert-info" style="display: none;"></div>
+        <div id="tab-sessions" class="tab-pane" style="display:none;">
+            <h4>Create Academic Session</h4>
+            <form id="sessionForm" class="row g-3">
+                <div class="col-md-4">
+                    <input type="text" id="sessName" class="form-control" placeholder="Session Name (e.g. Fall 2025)"
+                        required>
+                </div>
+                <div class="col-md-3">
+                    <input type="date" id="sessStart" class="form-control" required>
+                </div>
+                <div class="col-md-3">
+                    <input type="date" id="sessEnd" class="form-control" required>
+                </div>
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-success w-100">Create</button>
+                </div>
+            </form>
+        </div>
+
+        <div id="tab-courses" class="tab-pane" style="display:none;">
+            <h4>Add New Course</h4>
+            <form id="courseForm" class="row g-3">
+                <div class="col-md-5">
+                    <input type="text" id="courseName" class="form-control"
+                        placeholder="Course Name (e.g. Operating Systems)" required>
+                </div>
+                <div class="col-md-3">
+                    <input type="text" id="courseCode" class="form-control" placeholder="Code (e.g. CSC300)" required>
+                </div>
+                <div class="col-md-2">
+                    <input type="number" id="courseCredit" class="form-control" placeholder="Credits" value="3"
+                        required>
+                </div>
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-warning w-100">Add Course</button>
+                </div>
+            </form>
+        </div>
+
+        <div id="tab-sections" class="tab-pane" style="display:none;">
+            <h4>Create Section</h4>
+            <form id="sectionForm" class="row g-3">
+                <div class="col-md-4">
+                    <input type="text" id="sectName" class="form-control" placeholder="Section Name (e.g. BSCS-5A)"
+                        required>
+                </div>
+                <div class="col-md-4">
+                    <input type="number" id="sectSessionId" class="form-control" placeholder="Academic Session ID"
+                        required>
+                </div>
+                <div class="col-md-4">
+                    <button type="submit" class="btn btn-info w-100">Create Section</button>
+                </div>
+            </form>
+        </div>
+
+        <div id="tab-assignments" class="tab-pane" style="display:none;">
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="card p-3">
+                        <h5>Assign Teacher to Course</h5>
+                        <form id="assignTeacherForm">
+                            <input type="number" id="atTeacherId" class="form-control mb-2"
+                                placeholder="Teacher User ID" required>
+                            <input type="number" id="atCourseId" class="form-control mb-2" placeholder="Course ID"
+                                required>
+                            <input type="number" id="atSectionId" class="form-control mb-2" placeholder="Section ID"
+                                required>
+                            <button type="submit" class="btn btn-primary w-100">Assign Teacher</button>
+                        </form>
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="card p-3">
+                        <h5>Enroll Student in Course</h5>
+                        <form id="enrollStudentForm">
+                            <input type="number" id="esStudentId" class="form-control mb-2"
+                                placeholder="Student User ID" required>
+                            <input type="number" id="esCourseId" class="form-control mb-2" placeholder="Course ID"
+                                required>
+                            <input type="number" id="esSectionId" class="form-control mb-2" placeholder="Section ID"
+                                required>
+                            <button type="submit" class="btn btn-success w-100">Enroll Student</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
     </div>
 
     <script src="../js/common.js"></script>
