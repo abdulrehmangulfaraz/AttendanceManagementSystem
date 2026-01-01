@@ -12,6 +12,7 @@ const ManageTimetable = () => {
   const { showToast } = useToast();
 
   // Form
+  const [isBreak, setIsBreak] = useState(false); // Toggle for Break
   const [formData, setFormData] = useState({
     day: "Monday",
     startTime: "",
@@ -38,13 +39,17 @@ const ManageTimetable = () => {
   const handleAddClass = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await api.post("/Admin/timetable", {
+      // If it is a Break, we don't send a courseId
+      const payload = {
         ...formData,
         sectionId: parseInt(selectedSection),
-      });
+        courseId: isBreak ? null : formData.courseId,
+      };
+
+      await api.post("/Admin/timetable", payload);
       setShowModal(false);
       fetchTimetable(selectedSection);
-      showToast("Class added to schedule!", "success");
+      showToast(isBreak ? "Break added!" : "Class added!", "success");
     } catch {
       showToast("Conflict detected or Error.", "error");
     }
@@ -73,10 +78,13 @@ const ManageTimetable = () => {
         <>
           <div className="mb-4">
             <button
-              onClick={() => setShowModal(true)}
+              onClick={() => {
+                setIsBreak(false);
+                setShowModal(true);
+              }}
               className="px-4 py-2 bg-blue-600 text-white rounded shadow"
             >
-              + Add Class Slot
+              + Add Time Slot
             </button>
           </div>
 
@@ -96,17 +104,30 @@ const ManageTimetable = () => {
                       .map((t) => (
                         <div
                           key={t.id}
-                          className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-100 dark:border-blue-800"
+                          className={`p-3 rounded-lg border 
+                                            ${
+                                              t.isBreak
+                                                ? "bg-green-50 dark:bg-green-900/20 border-green-100 dark:border-green-800"
+                                                : "bg-blue-50 dark:bg-blue-900/20 border-blue-100 dark:border-blue-800"
+                                            }`}
                         >
-                          <p className="font-bold text-blue-700 dark:text-blue-300 text-sm">
+                          <p
+                            className={`font-bold text-sm ${
+                              t.isBreak
+                                ? "text-green-700 dark:text-green-300"
+                                : "text-blue-700 dark:text-blue-300"
+                            }`}
+                          >
                             {t.courseName}
                           </p>
                           <p className="text-xs text-stone-500 dark:text-slate-400">
                             {t.startTime.slice(0, 5)} - {t.endTime.slice(0, 5)}
                           </p>
-                          <p className="text-xs font-mono mt-1 text-stone-400">
-                            Rm: {t.room}
-                          </p>
+                          {!t.isBreak && (
+                            <p className="text-xs font-mono mt-1 text-stone-400">
+                              Rm: {t.room}
+                            </p>
+                          )}
                         </div>
                       ))}
                   </div>
@@ -117,28 +138,49 @@ const ManageTimetable = () => {
         </>
       )}
 
-      {/* Modal for adding class */}
+      {/* Modal */}
       <Modal
         isOpen={showModal}
         onClose={() => setShowModal(false)}
-        title="Add Class to Schedule"
+        title="Add Time Slot"
       >
         <form onSubmit={handleAddClass} className="space-y-4">
-          <select
-            className="w-full p-2 border rounded dark:bg-midnight-950 dark:text-white"
-            value={formData.courseId}
-            onChange={(e) =>
-              setFormData({ ...formData, courseId: e.target.value })
-            }
-            required
-          >
-            <option value="">Select Course</option>
-            {courses.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
-          </select>
+          {/* Break Toggle */}
+          <div className="flex items-center gap-2 p-3 bg-stone-50 dark:bg-midnight-950 rounded-lg border border-stone-200 dark:border-midnight-800">
+            <input
+              type="checkbox"
+              id="breakToggle"
+              checked={isBreak}
+              onChange={(e) => setIsBreak(e.target.checked)}
+              className="w-5 h-5 accent-green-600"
+            />
+            <label
+              htmlFor="breakToggle"
+              className="text-sm font-bold text-stone-700 dark:text-white cursor-pointer"
+            >
+              Mark as Break / Free Time
+            </label>
+          </div>
+
+          {/* Course Selection (Disabled if Break) */}
+          {!isBreak && (
+            <select
+              className="w-full p-2 border rounded dark:bg-midnight-950 dark:text-white"
+              value={formData.courseId}
+              onChange={(e) =>
+                setFormData({ ...formData, courseId: e.target.value })
+              }
+              required={!isBreak}
+            >
+              <option value="">Select Course</option>
+              {courses.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+          )}
+
           <select
             className="w-full p-2 border rounded dark:bg-midnight-950 dark:text-white"
             value={formData.day}
@@ -152,6 +194,7 @@ const ManageTimetable = () => {
               )
             )}
           </select>
+
           <div className="grid grid-cols-2 gap-2">
             <input
               type="time"
@@ -172,16 +215,28 @@ const ManageTimetable = () => {
               }
             />
           </div>
-          <input
-            type="text"
-            placeholder="Room No"
-            className="w-full p-2 border rounded dark:bg-midnight-950 dark:text-white"
-            required
-            value={formData.room}
-            onChange={(e) => setFormData({ ...formData, room: e.target.value })}
-          />
-          <button className="w-full py-3 bg-blue-600 text-white font-bold rounded">
-            Save Class
+
+          {!isBreak && (
+            <input
+              type="text"
+              placeholder="Room No"
+              className="w-full p-2 border rounded dark:bg-midnight-950 dark:text-white"
+              required={!isBreak}
+              value={formData.room}
+              onChange={(e) =>
+                setFormData({ ...formData, room: e.target.value })
+              }
+            />
+          )}
+
+          <button
+            className={`w-full py-3 text-white font-bold rounded shadow-lg ${
+              isBreak
+                ? "bg-green-600 hover:bg-green-700"
+                : "bg-blue-600 hover:bg-blue-700"
+            }`}
+          >
+            {isBreak ? "Add Break" : "Save Class"}
           </button>
         </form>
       </Modal>

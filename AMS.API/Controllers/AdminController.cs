@@ -171,7 +171,9 @@ namespace AMS.API.Controllers
                     t.StartTime,
                     t.EndTime,
                     t.Room,
-                    CourseName = t.Course.Name
+                    // If Course is null, return "Break", otherwise return Course Name
+                    CourseName = t.Course == null ? "Break" : t.Course.Name,
+                    IsBreak = t.CourseId == null
                 })
                 .ToListAsync();
             return Ok(entries);

@@ -52,10 +52,27 @@ const ManageAllocations = () => {
 
   const handleAssignTeacher = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // 1. CHECK: Is a teacher already assigned to this Course + Section?
+    const alreadyAssigned = allocations.teachers.find(
+      (t) =>
+        t.courseId === parseInt(teacherForm.courseId) &&
+        t.sectionId === parseInt(teacherForm.sectionId)
+    );
+
+    if (alreadyAssigned) {
+      showToast(
+        `Error: ${alreadyAssigned.name} is already teaching this course for this section.`,
+        "error"
+      );
+      return; // Stop execution
+    }
+
     try {
       await api.post("/Admin/assign-teacher", teacherForm);
-      showToast("Teacher Assigned!", "success");
+      showToast("Teacher Assigned Successfully!", "success");
       fetchData();
+      // Optional: Reset form
     } catch {
       showToast("Failed to assign teacher.", "error");
     }
