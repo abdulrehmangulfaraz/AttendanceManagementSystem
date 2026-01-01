@@ -9,7 +9,7 @@ namespace AMS.API.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    [Authorize(Roles = "Admin")] // SECURITY: Only Admins can access this
+    [Authorize(Roles = "Admin")]
     public class AdminController : ControllerBase
     {
         private readonly ApplicationDbContext _context;
@@ -19,126 +19,141 @@ namespace AMS.API.Controllers
             _context = context;
         }
 
-        // 1. Create Academic Session
+        // --- 1. MANAGE USERS ---
+        [HttpGet("users")]
+        public async Task<IActionResult> GetAllUsers()
+        {
+            var users = await _context.Users.Select(u => new { u.Id, u.Name, u.Email, u.Role }).ToListAsync();
+            return Ok(users);
+        }
+
+        [HttpDelete("users/{id}")]
+        public async Task<IActionResult> DeleteUser(int id)
+        {
+            var user = await _context.Users.FindAsync(id);
+            if (user == null) return NotFound("User not found");
+            _context.Users.Remove(user);
+            await _context.SaveChangesAsync();
+            return Ok("User deleted");
+        }
+
+        // --- 2. MANAGE SESSIONS ---
+        [HttpGet("sessions")]
+        public async Task<IActionResult> GetAllSessions()
+        {
+            return Ok(await _context.AcademicSessions.ToListAsync());
+        }
+
         [HttpPost("sessions")]
         public async Task<IActionResult> CreateSession(CreateSessionDto request)
         {
-            var session = new AcademicSession
-            {
-                Name = request.Name,
-                StartDate = request.StartDate,
-                EndDate = request.EndDate
-            };
-
+            var session = new AcademicSession { Name = request.Name, StartDate = request.StartDate, EndDate = request.EndDate };
             _context.AcademicSessions.Add(session);
             await _context.SaveChangesAsync();
-
-            return Ok(new { message = "Session created successfully", sessionId = session.Id });
+            return Ok(session);
         }
 
-        // 2. Create Course
+        [HttpDelete("sessions/{id}")]
+        public async Task<IActionResult> DeleteSession(int id)
+        {
+            var s = await _context.AcademicSessions.FindAsync(id);
+            if (s == null) return NotFound();
+            _context.AcademicSessions.Remove(s);
+            await _context.SaveChangesAsync();
+            return Ok("Session deleted");
+        }
+
+        // --- 3. MANAGE COURSES ---
+        [HttpGet("courses")]
+        public async Task<IActionResult> GetAllCourses()
+        {
+            return Ok(await _context.Courses.ToListAsync());
+        }
+
         [HttpPost("courses")]
         public async Task<IActionResult> CreateCourse(CreateCourseDto request)
         {
-            var course = new Course
-            {
-                Name = request.Name,
-                Code = request.Code,
-                CreditHours = request.CreditHours
-            };
-
-            _context.Courses.Add(course);
+            var c = new Course { Name = request.Name, Code = request.Code, CreditHours = request.CreditHours };
+            _context.Courses.Add(c);
             await _context.SaveChangesAsync();
-
-            return Ok(new { message = "Course created successfully", courseId = course.Id });
+            return Ok(c);
         }
 
-        // 3. Create Section
+        [HttpDelete("courses/{id}")]
+        public async Task<IActionResult> DeleteCourse(int id)
+        {
+            var c = await _context.Courses.FindAsync(id);
+            if (c == null) return NotFound();
+            _context.Courses.Remove(c);
+            await _context.SaveChangesAsync();
+            return Ok("Course deleted");
+        }
+
+        // --- 4. MANAGE SECTIONS ---
+        [HttpGet("sections")]
+        public async Task<IActionResult> GetAllSections()
+        {
+            // Include Session Name for readability
+            var sections = await _context.Sections.Include(s => s.AcademicSession).Select(s => new
+            {
+                s.Id,
+                s.Name,
+                SessionName = s.AcademicSession.Name
+            }).ToListAsync();
+            return Ok(sections);
+        }
+
         [HttpPost("sections")]
         public async Task<IActionResult> CreateSection(CreateSectionDto request)
         {
-            // Validate that the Session exists first
-            var session = await _context.AcademicSessions.FindAsync(request.AcademicSessionId);
-            if (session == null)
-            {
-                return NotFound("Academic Session not found.");
-            }
-
-            var section = new Section
-            {
-                Name = request.Name,
-                AcademicSessionId = request.AcademicSessionId
-            };
-
-            _context.Sections.Add(section);
+            var s = new Section { Name = request.Name, AcademicSessionId = request.AcademicSessionId };
+            _context.Sections.Add(s);
             await _context.SaveChangesAsync();
-
-            return Ok(new { message = "Section created successfully", sectionId = section.Id });
+            return Ok(s);
         }
 
-        // 4. Assign Teacher to Course & Section
+        [HttpDelete("sections/{id}")]
+        public async Task<IActionResult> DeleteSection(int id)
+        {
+            var s = await _context.Sections.FindAsync(id);
+            if (s == null) return NotFound();
+            _context.Sections.Remove(s);
+            await _context.SaveChangesAsync();
+            return Ok("Section deleted");
+        }
+
+        // --- 5. ASSIGNMENTS (ALLOCATIONS) ---
         [HttpPost("assign-teacher")]
         public async Task<IActionResult> AssignTeacher(AssignTeacherDto request)
         {
-            // 1. Verify Teacher exists and is actually a Teacher
-            var teacher = await _context.Users.FindAsync(request.TeacherId);
-            if (teacher == null || teacher.Role != "Teacher")
-            {
-                return BadRequest("Invalid Teacher ID or User is not a Teacher.");
-            }
-
-            // 2. Verify Course exists
-            var course = await _context.Courses.FindAsync(request.CourseId);
-            if (course == null) return NotFound("Course not found.");
-
-            // 3. Verify Section exists
-            var section = await _context.Sections.FindAsync(request.SectionId);
-            if (section == null) return NotFound("Section not found.");
-
-            // 4. Create Allocation
-            var allocation = new TeacherAllocation
-            {
-                TeacherId = request.TeacherId,
-                CourseId = request.CourseId,
-                SectionId = request.SectionId
-            };
-
+            var allocation = new TeacherAllocation { TeacherId = request.TeacherId, CourseId = request.CourseId, SectionId = request.SectionId };
             _context.TeacherAllocations.Add(allocation);
             await _context.SaveChangesAsync();
-
-            return Ok("Teacher assigned successfully.");
+            return Ok("Teacher assigned");
         }
 
-        // 5. Enroll Student in Course & Section
         [HttpPost("enroll-student")]
         public async Task<IActionResult> EnrollStudent(EnrollStudentDto request)
         {
-            // 1. Verify Student exists and role is correct
-            var student = await _context.Users.FindAsync(request.StudentId);
-            if (student == null || student.Role != "Student")
-            {
-                return BadRequest("Invalid Student ID or User is not a Student.");
-            }
-
-            // 2. Verify Course and Section exist
-            var course = await _context.Courses.FindAsync(request.CourseId);
-            var section = await _context.Sections.FindAsync(request.SectionId);
-
-            if (course == null || section == null)
-                return NotFound("Course or Section not found.");
-
-            // 3. Create Enrollment
-            var enrollment = new StudentEnrollment
-            {
-                StudentId = request.StudentId,
-                CourseId = request.CourseId,
-                SectionId = request.SectionId
-            };
-
+            var enrollment = new StudentEnrollment { StudentId = request.StudentId, CourseId = request.CourseId, SectionId = request.SectionId };
             _context.StudentEnrollments.Add(enrollment);
             await _context.SaveChangesAsync();
+            return Ok("Student enrolled");
+        }
 
-            return Ok("Student enrolled successfully.");
+        // View all assignments (New)
+        [HttpGet("assignments")]
+        public async Task<IActionResult> GetAssignments()
+        {
+            var teachers = await _context.TeacherAllocations
+                .Select(t => new { Type = "Teacher", Name = t.Teacher.Name, Course = t.Course.Name, Section = t.Section.Name, Id = t.Id })
+                .ToListAsync();
+
+            var students = await _context.StudentEnrollments
+                .Select(s => new { Type = "Student", Name = s.Student.Name, Course = s.Course.Name, Section = s.Section.Name, Id = s.Id })
+                .ToListAsync();
+
+            return Ok(new { teachers, students });
         }
     }
 }
