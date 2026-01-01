@@ -36,4 +36,14 @@ namespace AMS.API.DTOs
         [Required]
         public int SectionId { get; set; }
     }
+
+    public class EnrollStudentDto
+    {
+        [Required]
+        public int StudentId { get; set; }
+        [Required]
+        public int CourseId { get; set; }
+        [Required]
+        public int SectionId { get; set; }
+    }
 }

@@ -108,5 +108,37 @@ namespace AMS.API.Controllers
 
             return Ok("Teacher assigned successfully.");
         }
+
+        // 5. Enroll Student in Course & Section
+        [HttpPost("enroll-student")]
+        public async Task<IActionResult> EnrollStudent(EnrollStudentDto request)
+        {
+            // 1. Verify Student exists and role is correct
+            var student = await _context.Users.FindAsync(request.StudentId);
+            if (student == null || student.Role != "Student")
+            {
+                return BadRequest("Invalid Student ID or User is not a Student.");
+            }
+
+            // 2. Verify Course and Section exist
+            var course = await _context.Courses.FindAsync(request.CourseId);
+            var section = await _context.Sections.FindAsync(request.SectionId);
+
+            if (course == null || section == null)
+                return NotFound("Course or Section not found.");
+
+            // 3. Create Enrollment
+            var enrollment = new StudentEnrollment
+            {
+                StudentId = request.StudentId,
+                CourseId = request.CourseId,
+                SectionId = request.SectionId
+            };
+
+            _context.StudentEnrollments.Add(enrollment);
+            await _context.SaveChangesAsync();
+
+            return Ok("Student enrolled successfully.");
+        }
     }
 }
