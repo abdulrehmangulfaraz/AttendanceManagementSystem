@@ -55,5 +55,24 @@ namespace AMS.API.Controllers
             await _context.SaveChangesAsync();
             return Ok("Attendance marked successfully.");
         }
+
+        // 2. View Attendance for a specific Course & Section
+        [HttpGet("attendance/{courseId}/{sectionId}")]
+        public async Task<IActionResult> GetClassAttendance(int courseId, int sectionId)
+        {
+            var attendanceList = await _context.Attendances
+                .Include(a => a.Student) // Load Student Name
+                .Where(a => a.CourseId == courseId && a.SectionId == sectionId)
+                .OrderByDescending(a => a.Date)
+                .Select(a => new AttendanceRecordDto
+                {
+                    StudentName = a.Student.Name,
+                    Date = a.Date,
+                    Status = a.Status
+                })
+                .ToListAsync();
+
+            return Ok(attendanceList);
+        }
     }
 }
