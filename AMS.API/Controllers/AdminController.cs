@@ -155,5 +155,52 @@ namespace AMS.API.Controllers
 
             return Ok(new { teachers, students });
         }
+
+        // --- TIMETABLE MANAGEMENT ---
+        [HttpGet("timetable/{sectionId}")]
+        public async Task<IActionResult> GetTimetable(int sectionId)
+        {
+            var entries = await _context.TimetableEntries
+                .Where(t => t.SectionId == sectionId)
+                .Include(t => t.Course)
+                .OrderBy(t => t.Day).ThenBy(t => t.StartTime)
+                .Select(t => new
+                {
+                    t.Id,
+                    t.Day,
+                    t.StartTime,
+                    t.EndTime,
+                    t.Room,
+                    CourseName = t.Course.Name
+                })
+                .ToListAsync();
+            return Ok(entries);
+        }
+
+        [HttpPost("timetable")]
+        public async Task<IActionResult> AddTimetableEntry(TimetableEntry entry)
+        {
+            // Basic conflict check
+            bool conflict = await _context.TimetableEntries.AnyAsync(t =>
+                t.SectionId == entry.SectionId && t.Day == entry.Day &&
+                ((entry.StartTime >= t.StartTime && entry.StartTime < t.EndTime) ||
+                 (entry.EndTime > t.StartTime && entry.EndTime <= t.EndTime)));
+
+            if (conflict) return BadRequest("Time slot conflict detected for this section.");
+
+            _context.TimetableEntries.Add(entry);
+            await _context.SaveChangesAsync();
+            return Ok(entry);
+        }
+
+        [HttpDelete("timetable/{id}")]
+        public async Task<IActionResult> DeleteTimetableEntry(int id)
+        {
+            var entry = await _context.TimetableEntries.FindAsync(id);
+            if (entry == null) return NotFound();
+            _context.TimetableEntries.Remove(entry);
+            await _context.SaveChangesAsync();
+            return Ok("Deleted");
+        }
     }
 }

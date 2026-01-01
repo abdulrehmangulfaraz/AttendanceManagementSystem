@@ -16,5 +16,6 @@ namespace AMS.API.Data
         public DbSet<TeacherAllocation> TeacherAllocations { get; set; }
         public DbSet<StudentEnrollment> StudentEnrollments { get; set; }
         public DbSet<Attendance> Attendances { get; set; }
+        public DbSet<TimetableEntry> TimetableEntries { get; set; }
     }
 }

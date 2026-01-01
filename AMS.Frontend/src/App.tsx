@@ -8,6 +8,9 @@ import DashboardHome from "./pages/admin/DashboardHome";
 import ManageUsers from "./pages/admin/ManageUsers";
 import ManageSessions from "./pages/admin/ManageSessions"; // <--- New
 import ManageCourses from "./pages/admin/ManageCourses"; // <--- New
+import ManageAllocations from "./pages/admin/ManageAllocations";
+import ManageTimetable from "./pages/admin/ManageTimetable";
+import ManageSections from "./pages/admin/ManageSections";
 
 function App() {
   return (
@@ -24,6 +27,9 @@ function App() {
                 <Route path="sessions" element={<ManageSessions />} />{" "}
                 {/* Route */}
                 <Route path="courses" element={<ManageCourses />} />{" "}
+                <Route path="sections" element={<ManageSections />} />
+                <Route path="allocations" element={<ManageAllocations />} />
+                <Route path="timetable" element={<ManageTimetable />} />
                 {/* Route */}
               </Route>
             </Routes>
