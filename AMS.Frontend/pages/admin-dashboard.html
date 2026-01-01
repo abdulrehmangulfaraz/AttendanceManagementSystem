@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AMS - Admin Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            display: flex;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        .sidebar {
+            min-width: 250px;
+            background: #212529;
+            color: white;
+            min-height: 100vh;
+        }
+
+        .sidebar a {
+            color: white;
+            text-decoration: none;
+            padding: 15px;
+            display: block;
+        }
+
+        .sidebar a:hover {
+            background: #343a40;
+        }
+
+        .content {
+            flex-grow: 1;
+            padding: 20px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="sidebar d-flex flex-column p-3">
+        <h3>AMS Admin</h3>
+        <hr>
+        <a href="#">Manage Sessions</a>
+        <a href="#">Manage Courses (Coming Soon)</a>
+        <a href="#">Manage Students (Coming Soon)</a>
+        <hr>
+        <button onclick="logout()" class="btn btn-danger w-100 mt-auto">Logout</button>
+    </div>
+
+    <div class="content">
+        <h2>Academic Sessions</h2>
+
+        <div class="card p-3 mb-4">
+            <h5>Create New Session</h5>
+            <form id="createSessionForm">
+                <div class="row">
+                    <div class="col-md-4">
+                        <input type="text" id="sessionName" class="form-control"
+                            placeholder="Session Name (e.g. Fall 2026)" required>
+                    </div>
+                    <div class="col-md-3">
+                        <input type="date" id="startDate" class="form-control" required>
+                    </div>
+                    <div class="col-md-3">
+                        <input type="date" id="endDate" class="form-control" required>
+                    </div>
+                    <div class="col-md-2">
+                        <button type="submit" class="btn btn-success w-100">Create</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        <div id="statusMessage" class="alert alert-info" style="display: none;"></div>
+    </div>
+
+    <script src="../js/common.js"></script>
+    <script src="../js/admin.js"></script>
+</body>
+
+</html>
