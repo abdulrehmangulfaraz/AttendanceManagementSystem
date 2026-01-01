@@ -1,3 +1,4 @@
+using AMS.API.Models;
 using Microsoft.EntityFrameworkCore;
 
 namespace AMS.API.Data
@@ -8,6 +9,6 @@ namespace AMS.API.Data
         {
         }
 
-        // We will add DbSet properties here later (e.g., public DbSet<User> Users { get; set; })
+        public DbSet<User> Users { get; set; }
     }
 }
