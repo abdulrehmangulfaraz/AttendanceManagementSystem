@@ -26,4 +26,14 @@ namespace AMS.API.DTOs
         [Required]
         public int AcademicSessionId { get; set; } // Which semester is this for?
     }
+
+    public class AssignTeacherDto
+    {
+        [Required]
+        public int TeacherId { get; set; }
+        [Required]
+        public int CourseId { get; set; }
+        [Required]
+        public int SectionId { get; set; }
+    }
 }

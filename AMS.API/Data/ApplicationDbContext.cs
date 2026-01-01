@@ -13,5 +13,6 @@ namespace AMS.API.Data
         public DbSet<AcademicSession> AcademicSessions { get; set; }
         public DbSet<Course> Courses { get; set; }
         public DbSet<Section> Sections { get; set; }
+        public DbSet<TeacherAllocation> TeacherAllocations { get; set; }
     }
 }

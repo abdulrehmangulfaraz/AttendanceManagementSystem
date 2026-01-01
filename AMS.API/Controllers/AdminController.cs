@@ -75,5 +75,38 @@ namespace AMS.API.Controllers
 
             return Ok(new { message = "Section created successfully", sectionId = section.Id });
         }
+
+        // 4. Assign Teacher to Course & Section
+        [HttpPost("assign-teacher")]
+        public async Task<IActionResult> AssignTeacher(AssignTeacherDto request)
+        {
+            // 1. Verify Teacher exists and is actually a Teacher
+            var teacher = await _context.Users.FindAsync(request.TeacherId);
+            if (teacher == null || teacher.Role != "Teacher")
+            {
+                return BadRequest("Invalid Teacher ID or User is not a Teacher.");
+            }
+
+            // 2. Verify Course exists
+            var course = await _context.Courses.FindAsync(request.CourseId);
+            if (course == null) return NotFound("Course not found.");
+
+            // 3. Verify Section exists
+            var section = await _context.Sections.FindAsync(request.SectionId);
+            if (section == null) return NotFound("Section not found.");
+
+            // 4. Create Allocation
+            var allocation = new TeacherAllocation
+            {
+                TeacherId = request.TeacherId,
+                CourseId = request.CourseId,
+                SectionId = request.SectionId
+            };
+
+            _context.TeacherAllocations.Add(allocation);
+            await _context.SaveChangesAsync();
+
+            return Ok("Teacher assigned successfully.");
+        }
     }
 }
