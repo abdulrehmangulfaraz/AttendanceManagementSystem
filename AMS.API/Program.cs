@@ -6,9 +6,9 @@ using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// 1. Configure Database
+// 1. Configure Database (CHANGED TO SQLITE)
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+    options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 // ---  Add CORS ---
 builder.Services.AddCors(options =>
@@ -16,7 +16,7 @@ builder.Services.AddCors(options =>
     options.AddPolicy("AllowAll",
         policy =>
         {
-            policy.AllowAnyOrigin()
+            policy.AllowAnyOrigin() // In production, replace with Vercel URL later
                   .AllowAnyMethod()
                   .AllowAnyHeader();
         });
@@ -39,8 +39,8 @@ builder.Services.AddAuthentication(options =>
     {
         ValidateIssuerSigningKey = true,
         IssuerSigningKey = new SymmetricSecurityKey(key),
-        ValidateIssuer = false, // Simplified for development
-        ValidateAudience = false // Simplified for development
+        ValidateIssuer = false,
+        ValidateAudience = false
     };
 });
 
@@ -50,22 +50,44 @@ builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
 
+// --- NEW: Auto-Migration for SQLite on Render ---
+// This creates the database file automatically when the server starts
+using (var scope = app.Services.CreateScope())
+{
+    var services = scope.ServiceProvider;
+    try
+    {
+        var context = services.GetRequiredService<ApplicationDbContext>();
+        context.Database.Migrate(); // Applies pending migrations
+    }
+    catch (Exception ex)
+    {
+        var logger = services.GetRequiredService<ILogger<Program>>();
+        logger.LogError(ex, "An error occurred creating the DB.");
+    }
+}
+
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
 }
+// Note: You might want to enable Swagger in production for testing on Render
+app.UseSwagger();
+app.UseSwaggerUI();
 
 app.UseHttpsRedirection();
 
 // --- Use CORS ---
 app.UseCors("AllowAll");
 
-// 3. Enable Authentication (Must be before Authorization)
+// 3. Enable Authentication
 app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
 
-app.Run();
+// Render uses the PORT environment variable
+var port = Environment.GetEnvironmentVariable("PORT") ?? "8080";
+app.Run($"http://0.0.0.0:{port}");
