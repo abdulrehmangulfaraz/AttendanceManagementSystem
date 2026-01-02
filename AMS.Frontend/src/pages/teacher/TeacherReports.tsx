@@ -14,7 +14,6 @@ import autoTable from "jspdf-autotable";
 import api from "../../api/axios";
 import { useToast } from "../../context/ToastContext";
 
-// Register ChartJS components
 ChartJS.register(
   CategoryScale,
   LinearScale,
@@ -28,10 +27,12 @@ const TeacherReports = () => {
   const { showToast } = useToast();
 
   // State
-  const [courses, setCourses] = useState<any[]>([]);
-  const [selectedCourse, setSelectedCourse] = useState<number | null>(null);
+  const [allocations, setAllocations] = useState<any[]>([]);
+  // We store the allocation ID to easily find the selected object
+  const [selectedAllocationId, setSelectedAllocationId] = useState<
+    number | string
+  >("");
 
-  // Default: Last 30 days
   const [startDate, setStartDate] = useState(
     new Date(new Date().setDate(new Date().getDate() - 30))
       .toISOString()
@@ -46,26 +47,31 @@ const TeacherReports = () => {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    // Load courses
     api.get("/Teacher/my-allocations").then((res) => {
-      setCourses(res.data);
-      if (res.data.length > 0) setSelectedCourse(res.data[0].courseId);
+      setAllocations(res.data);
+      if (res.data.length > 0) {
+        setSelectedAllocationId(res.data[0].id);
+      }
     });
   }, []);
 
   useEffect(() => {
-    if (selectedCourse) fetchReport();
-  }, [selectedCourse, startDate, endDate]);
+    if (selectedAllocationId) fetchReport();
+  }, [selectedAllocationId, startDate, endDate]);
 
   const fetchReport = async () => {
+    // Find the actual IDs based on the selected Allocation ID
+    const alloc = allocations.find((a) => a.id == selectedAllocationId);
+    if (!alloc) return;
+
     setLoading(true);
     try {
+      // Pass both courseId and sectionId
       const res = await api.get(
-        `/Teacher/reports?courseId=${selectedCourse}&startDate=${startDate}&endDate=${endDate}`
+        `/Teacher/reports?courseId=${alloc.courseId}&sectionId=${alloc.sectionId}&startDate=${startDate}&endDate=${endDate}`
       );
       setReportData(res.data);
 
-      // Prepare Chart Data
       const cData = res.data.Chart || [];
       setChartData({
         labels: cData.map((d: any) => d.date),
@@ -94,24 +100,22 @@ const TeacherReports = () => {
     if (!reportData) return;
 
     const doc = new jsPDF();
-    const courseName =
-      courses.find((c) => c.courseId === selectedCourse)?.courseName ||
-      "Course";
+    const alloc = allocations.find((a) => a.id == selectedAllocationId);
+    const title = alloc
+      ? `${alloc.courseName} (${alloc.sectionName})`
+      : "Attendance Report";
 
-    // 1. Title
     doc.setFontSize(18);
-    doc.text(`Attendance Report: ${courseName}`, 14, 20);
+    doc.text(`Report: ${title}`, 14, 20);
     doc.setFontSize(12);
-    doc.text(`From: ${startDate} To: ${endDate}`, 14, 30);
+    doc.text(`Period: ${startDate} to ${endDate}`, 14, 30);
 
-    // 2. Add Chart (Convert Canvas to Image)
     const canvas = document.querySelector("canvas");
     if (canvas) {
       const chartImg = canvas.toDataURL("image/png");
       doc.addImage(chartImg, "PNG", 14, 40, 180, 80);
     }
 
-    // 3. Add Table
     autoTable(doc, {
       startY: 130,
       head: [["Student Name", "Present", "Absent", "Percentage"]],
@@ -123,30 +127,29 @@ const TeacherReports = () => {
       ]),
     });
 
-    doc.save(`Attendance_Report_${courseName}.pdf`);
+    doc.save(`Attendance_${title}.pdf`);
   };
 
   return (
     <div className="p-6">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
         <h2 className="text-2xl font-bold text-stone-800 dark:text-white">
-          Attendance Reports
+          Reports
         </h2>
 
-        {/* Controls */}
         <div className="flex flex-wrap gap-2 items-end">
           <div>
             <label className="block text-xs font-bold text-stone-500 mb-1">
-              Course
+              Class
             </label>
             <select
               className="p-2 rounded border dark:bg-midnight-900 dark:text-white dark:border-midnight-800"
-              value={selectedCourse || ""}
-              onChange={(e) => setSelectedCourse(Number(e.target.value))}
+              value={selectedAllocationId}
+              onChange={(e) => setSelectedAllocationId(e.target.value)}
             >
-              {courses.map((c) => (
-                <option key={c.courseId} value={c.courseId}>
-                  {c.courseName}
+              {allocations.map((a) => (
+                <option key={a.id} value={a.id}>
+                  {a.courseName} - {a.sectionName}
                 </option>
               ))}
             </select>
@@ -186,7 +189,6 @@ const TeacherReports = () => {
         </div>
       </div>
 
-      {/* Chart Section */}
       <div className="bg-white dark:bg-midnight-900 p-6 rounded-xl border border-stone-200 dark:border-midnight-800 shadow-sm mb-6 h-[400px]">
         {loading ? (
           <div className="h-full flex items-center justify-center text-stone-400">
@@ -204,7 +206,6 @@ const TeacherReports = () => {
         )}
       </div>
 
-      {/* Summary Table */}
       <div className="bg-white dark:bg-midnight-900 rounded-xl border border-stone-200 dark:border-midnight-800 overflow-hidden">
         <h3 className="p-4 font-bold border-b border-stone-200 dark:border-midnight-800 dark:text-white">
           Student Summary
@@ -227,7 +228,6 @@ const TeacherReports = () => {
             </tr>
           </thead>
           <tbody className="divide-y divide-stone-100 dark:divide-midnight-800">
-            {/* SAFE GUARD: Added '?.' and '|| []' to prevent crash if data is null */}
             {reportData?.Table?.map((row: any, idx: number) => (
               <tr
                 key={idx}

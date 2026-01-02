@@ -20,12 +20,10 @@ namespace AMS.API.Controllers
             _context = context;
         }
 
-        // 1. Get My Allocations (Dashboard Data)
+        // 1. Get My Allocations
         [HttpGet("my-allocations")]
         public async Task<IActionResult> GetMyAllocations()
         {
-            // Extract Teacher ID from Token Claims
-            // Ensure your AuthController adds ClaimTypes.NameIdentifier with the User ID
             var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("id");
             if (userIdClaim == null) return Unauthorized("User ID not found in token.");
 
@@ -49,12 +47,10 @@ namespace AMS.API.Controllers
             return Ok(allocations);
         }
 
-        // 2. Get Students for a Class (To Mark Attendance)
+        // 2. Get Students for a Class
         [HttpGet("students/{courseId}/{sectionId}")]
         public async Task<IActionResult> GetStudentsForClass(int courseId, int sectionId)
         {
-            // We assume you have a StudentEnrollments table based on your migrations
-            // If strictly using User role without enrollment table, this query might need adjustment.
             var students = await _context.StudentEnrollments
                 .Where(se => se.CourseId == courseId && se.SectionId == sectionId)
                 .Include(se => se.Student)
@@ -73,7 +69,6 @@ namespace AMS.API.Controllers
         [HttpPost("mark-attendance")]
         public async Task<IActionResult> MarkAttendance(MarkAttendanceDto request)
         {
-            // Prevent duplicates
             var existingRecord = await _context.Attendances
                 .FirstOrDefaultAsync(a => a.StudentId == request.StudentId &&
                                           a.CourseId == request.CourseId &&
@@ -119,22 +114,25 @@ namespace AMS.API.Controllers
             return Ok(attendanceList);
         }
 
-        // 5. Get My Timetable
+        // 5. Get My Timetable (FIXED CAST ERROR)
         [HttpGet("my-timetable")]
         public async Task<IActionResult> GetMyTimetable()
         {
-            var teacherId = int.Parse(User.FindFirst("id")?.Value ?? "0");
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("id");
+            if (userIdClaim == null) return Unauthorized();
+            int teacherId = int.Parse(userIdClaim.Value);
 
-            // Get courses assigned to teacher
+            // Get list of Course IDs (ints)
             var courseIds = await _context.TeacherAllocations
                 .Where(ta => ta.TeacherId == teacherId)
                 .Select(ta => ta.CourseId)
                 .ToListAsync();
 
-            // Fetch timetable entries for those courses
             var timetable = await _context.TimetableEntries
                 .Include(t => t.Course)
                 .Include(t => t.Section)
+                // FIX: Ensure t.CourseId is treated as int. 
+                // We use (int) casting or .Value if it's nullable.
                 .Where(t => courseIds.Contains((int)t.CourseId))
                 .Select(t => new
                 {
@@ -151,23 +149,26 @@ namespace AMS.API.Controllers
             return Ok(timetable);
         }
 
-        // 6. Get Attendance Report (Custom Date Range)
+        // 6. Get Attendance Report
         [HttpGet("reports")]
         public async Task<IActionResult> GetAttendanceReport(
             [FromQuery] int courseId,
+            [FromQuery] int sectionId,
             [FromQuery] DateTime startDate,
             [FromQuery] DateTime endDate)
         {
-            // 1. Fetch raw attendance records for the range
+            // Robust Date Logic (Includes the full EndDate)
+            var nextDay = endDate.AddDays(1);
+
             var attendanceData = await _context.Attendances
                 .Include(a => a.Student)
                 .Where(a => a.CourseId == courseId &&
-                          a.Date.Date >= startDate.Date &&
-                          a.Date.Date <= endDate.Date)
+                            a.SectionId == sectionId &&
+                            a.Date >= startDate &&
+                            a.Date < nextDay)
                 .OrderBy(a => a.Date)
                 .ToListAsync();
 
-            // 2. Prepare Data for Chart (Grouped by Date)
             var chartData = attendanceData
                 .GroupBy(a => a.Date.Date)
                 .Select(g => new
@@ -178,7 +179,6 @@ namespace AMS.API.Controllers
                 })
                 .ToList();
 
-            // 3. Prepare Data for Table (Summary per Student)
             var tableData = attendanceData
                 .GroupBy(a => a.StudentId)
                 .Select(g => new
@@ -186,7 +186,7 @@ namespace AMS.API.Controllers
                     StudentName = g.First().Student?.Name ?? "Unknown",
                     TotalPresent = g.Count(x => x.Status == "Present"),
                     TotalAbsent = g.Count(x => x.Status == "Absent"),
-                    Percentage = (double)g.Count(x => x.Status == "Present") / g.Count() * 100
+                    Percentage = g.Count() == 0 ? 0 : (double)g.Count(x => x.Status == "Present") / g.Count() * 100
                 })
                 .OrderBy(x => x.StudentName)
                 .ToList();
