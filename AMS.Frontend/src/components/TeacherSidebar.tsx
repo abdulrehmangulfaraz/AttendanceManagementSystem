@@ -10,11 +10,11 @@ const TeacherSidebar = () => {
       label: "My Classes",
       icon: /* Class Icon */ <span className="text-xl">📚</span>,
     },
-    {
-      path: "/teacher/timetable",
-      label: "My Timetable",
-      icon: /* Calendar Icon */ <span className="text-xl">📅</span>,
-    },
+    // {
+    //   path: "/teacher/timetable",
+    //   label: "My Timetable",
+    //   icon: /* Calendar Icon */ <span className="text-xl">📅</span>,
+    // },
     {
       path: "/teacher/reports",
       label: "Reports",
