@@ -122,31 +122,43 @@ namespace AMS.API.Controllers
             if (userIdClaim == null) return Unauthorized();
             int teacherId = int.Parse(userIdClaim.Value);
 
-            // Get list of Course IDs (ints)
-            var courseIds = await _context.TeacherAllocations
+            // 1. Get all allocations (Course + Section pairs) for this teacher
+            var allocations = await _context.TeacherAllocations
                 .Where(ta => ta.TeacherId == teacherId)
-                .Select(ta => ta.CourseId)
+                .Select(ta => new { ta.CourseId, ta.SectionId })
                 .ToListAsync();
 
-            var timetable = await _context.TimetableEntries
+            if (!allocations.Any()) return Ok(new List<object>());
+
+            // 2. Get distinct SectionIds to optimize the DB query
+            var sectionIds = allocations.Select(a => a.SectionId).Distinct().ToList();
+
+            // 3. Query TimetableEntries for these sections
+            // We fetch entries for relevant sections first
+            var rawEntries = await _context.TimetableEntries
                 .Include(t => t.Course)
                 .Include(t => t.Section)
-                // FIX: Ensure t.CourseId is treated as int. 
-                // We use (int) casting or .Value if it's nullable.
-                .Where(t => courseIds.Contains((int)t.CourseId))
+                .Where(t => sectionIds.Contains(t.SectionId) && t.CourseId != null) // Exclude breaks
+                .ToListAsync();
+
+            // 4. In-Memory Filter: Match CourseId + SectionId exactly
+            // This ensures you only see the specific class you are assigned to teach
+            var myEntries = rawEntries
+                .Where(t => allocations.Any(a => a.CourseId == t.CourseId && a.SectionId == t.SectionId))
                 .Select(t => new
                 {
                     t.Day,
-                    t.StartTime,
-                    t.EndTime,
-                    CourseName = t.Course.Name,
-                    SectionName = t.Section.Name,
+                    // Format TimeSpan to string to prevent frontend format issues
+                    StartTime = t.StartTime.ToString(@"hh\:mm"),
+                    EndTime = t.EndTime.ToString(@"hh\:mm"),
+                    CourseName = t.Course?.Name ?? "Unknown",
+                    SectionName = t.Section?.Name ?? "Unknown",
                     t.Room
                 })
                 .OrderBy(t => t.Day).ThenBy(t => t.StartTime)
-                .ToListAsync();
+                .ToList();
 
-            return Ok(timetable);
+            return Ok(myEntries);
         }
 
         // 6. Get Attendance Report
