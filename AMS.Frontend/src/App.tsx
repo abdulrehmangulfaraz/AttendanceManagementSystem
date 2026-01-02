@@ -3,14 +3,23 @@ import { AuthProvider } from "./context/AuthContext";
 import { ThemeProvider } from "./context/ThemeContext";
 import { ToastProvider } from "./context/ToastContext";
 import Login from "./pages/Login";
+
+// Layouts
 import AdminLayout from "./layouts/AdminLayout";
+import TeacherLayout from "./layouts/TeacherLayout"; // <--- Import
+
+// Admin Pages
 import DashboardHome from "./pages/admin/DashboardHome";
 import ManageUsers from "./pages/admin/ManageUsers";
-import ManageSessions from "./pages/admin/ManageSessions"; // <--- New
-import ManageCourses from "./pages/admin/ManageCourses"; // <--- New
+import ManageSessions from "./pages/admin/ManageSessions";
+import ManageCourses from "./pages/admin/ManageCourses";
 import ManageAllocations from "./pages/admin/ManageAllocations";
 import ManageTimetable from "./pages/admin/ManageTimetable";
 import ManageSections from "./pages/admin/ManageSections";
+
+// Teacher Pages
+import TeacherDashboard from "./pages/teacher/TeacherDashboard"; // <--- Import
+import ClassManager from "./pages/teacher/ClassManager"; // <--- Import
 
 function App() {
   return (
@@ -21,16 +30,24 @@ function App() {
             <Routes>
               <Route path="/" element={<Login />} />
 
+              {/* Admin Routes */}
               <Route path="/admin" element={<AdminLayout />}>
                 <Route index element={<DashboardHome />} />
                 <Route path="users" element={<ManageUsers />} />
-                <Route path="sessions" element={<ManageSessions />} />{" "}
-                {/* Route */}
-                <Route path="courses" element={<ManageCourses />} />{" "}
+                <Route path="sessions" element={<ManageSessions />} />
+                <Route path="courses" element={<ManageCourses />} />
                 <Route path="sections" element={<ManageSections />} />
                 <Route path="allocations" element={<ManageAllocations />} />
                 <Route path="timetable" element={<ManageTimetable />} />
-                {/* Route */}
+              </Route>
+
+              {/* Teacher Routes */}
+              <Route path="/teacher" element={<TeacherLayout />}>
+                <Route index element={<TeacherDashboard />} />
+                <Route
+                  path="class/:courseId/:sectionId"
+                  element={<ClassManager />}
+                />
               </Route>
             </Routes>
           </BrowserRouter>
