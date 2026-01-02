@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import { Bar } from "react-chartjs-2";
 import {
   Chart as ChartJS,
@@ -14,6 +14,7 @@ import autoTable from "jspdf-autotable";
 import api from "../../api/axios";
 import { useToast } from "../../context/ToastContext";
 
+// Register ChartJS components
 ChartJS.register(
   CategoryScale,
   LinearScale,
@@ -42,6 +43,7 @@ const TeacherReports = () => {
 
   const [reportData, setReportData] = useState<any>(null);
   const [chartData, setChartData] = useState<any>(null);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     // Load courses
@@ -56,6 +58,7 @@ const TeacherReports = () => {
   }, [selectedCourse, startDate, endDate]);
 
   const fetchReport = async () => {
+    setLoading(true);
     try {
       const res = await api.get(
         `/Teacher/reports?courseId=${selectedCourse}&startDate=${startDate}&endDate=${endDate}`
@@ -63,7 +66,7 @@ const TeacherReports = () => {
       setReportData(res.data);
 
       // Prepare Chart Data
-      const cData = res.data.Chart;
+      const cData = res.data.Chart || [];
       setChartData({
         labels: cData.map((d: any) => d.date),
         datasets: [
@@ -82,6 +85,8 @@ const TeacherReports = () => {
     } catch (err) {
       console.error(err);
       showToast("Failed to fetch report", "error");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -103,14 +108,14 @@ const TeacherReports = () => {
     const canvas = document.querySelector("canvas");
     if (canvas) {
       const chartImg = canvas.toDataURL("image/png");
-      doc.addImage(chartImg, "PNG", 14, 40, 180, 80); // x, y, width, height
+      doc.addImage(chartImg, "PNG", 14, 40, 180, 80);
     }
 
     // 3. Add Table
     autoTable(doc, {
       startY: 130,
       head: [["Student Name", "Present", "Absent", "Percentage"]],
-      body: reportData.Table.map((row: any) => [
+      body: (reportData.Table || []).map((row: any) => [
         row.studentName,
         row.totalPresent,
         row.totalAbsent,
@@ -173,7 +178,8 @@ const TeacherReports = () => {
 
           <button
             onClick={downloadPDF}
-            className="px-4 py-2 bg-blue-600 text-white font-bold rounded hover:bg-blue-700 transition shadow-lg shadow-blue-500/30 h-[42px]"
+            disabled={!reportData}
+            className="px-4 py-2 bg-blue-600 text-white font-bold rounded hover:bg-blue-700 transition shadow-lg shadow-blue-500/30 h-[42px] disabled:opacity-50"
           >
             Download PDF
           </button>
@@ -182,13 +188,19 @@ const TeacherReports = () => {
 
       {/* Chart Section */}
       <div className="bg-white dark:bg-midnight-900 p-6 rounded-xl border border-stone-200 dark:border-midnight-800 shadow-sm mb-6 h-[400px]">
-        {chartData ? (
+        {loading ? (
+          <div className="h-full flex items-center justify-center text-stone-400">
+            Loading Chart...
+          </div>
+        ) : chartData ? (
           <Bar
             data={chartData}
             options={{ responsive: true, maintainAspectRatio: false }}
           />
         ) : (
-          <p>Loading Chart...</p>
+          <div className="h-full flex items-center justify-center text-stone-400">
+            No data available
+          </div>
         )}
       </div>
 
@@ -215,7 +227,8 @@ const TeacherReports = () => {
             </tr>
           </thead>
           <tbody className="divide-y divide-stone-100 dark:divide-midnight-800">
-            {reportData?.Table.map((row: any, idx: number) => (
+            {/* SAFE GUARD: Added '?.' and '|| []' to prevent crash if data is null */}
+            {reportData?.Table?.map((row: any, idx: number) => (
               <tr
                 key={idx}
                 className="hover:bg-stone-50 dark:hover:bg-midnight-800/50"
@@ -244,6 +257,14 @@ const TeacherReports = () => {
                 </td>
               </tr>
             ))}
+            {!loading &&
+              (!reportData?.Table || reportData.Table.length === 0) && (
+                <tr>
+                  <td colSpan={4} className="p-8 text-center text-stone-500">
+                    No student records found for this period.
+                  </td>
+                </tr>
+              )}
           </tbody>
         </table>
       </div>
