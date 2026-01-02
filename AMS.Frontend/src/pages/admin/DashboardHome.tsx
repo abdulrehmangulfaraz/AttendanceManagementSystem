@@ -1,4 +1,25 @@
+import { useEffect, useState } from "react";
+import api from "../../api/axios";
+
 const DashboardHome = () => {
+  const [stats, setStats] = useState({
+    totalUsers: 0,
+    activeSessions: 0,
+    totalCourses: 0,
+  });
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const response = await api.get("/admin/stats");
+        setStats(response.data);
+      } catch (error) {
+        console.error("Failed to fetch dashboard stats", error);
+      }
+    };
+    fetchStats();
+  }, []);
+
   return (
     <div>
       {/* Stats Grid */}
@@ -14,9 +35,9 @@ const DashboardHome = () => {
             </span>
           </div>
           <p className="text-3xl font-bold text-stone-800 dark:text-white">
-            1,240
+            {stats.totalUsers}
           </p>
-          <p className="text-xs text-green-500 mt-2">↑ 12% from last month</p>
+          <p className="text-xs text-green-500 mt-2">Active in system</p>
         </div>
 
         {/* Stat Card 2 */}
@@ -29,7 +50,9 @@ const DashboardHome = () => {
               📅
             </span>
           </div>
-          <p className="text-3xl font-bold text-stone-800 dark:text-white">3</p>
+          <p className="text-3xl font-bold text-stone-800 dark:text-white">
+            {stats.activeSessions}
+          </p>
           <p className="text-xs text-stone-400 mt-2">Current Semester</p>
         </div>
 
@@ -44,13 +67,13 @@ const DashboardHome = () => {
             </span>
           </div>
           <p className="text-3xl font-bold text-stone-800 dark:text-white">
-            45
+            {stats.totalCourses}
           </p>
-          <p className="text-xs text-green-500 mt-2">All active</p>
+          <p className="text-xs text-green-500 mt-2">Total subjects</p>
         </div>
       </div>
 
-      {/* Placeholder for Recent Activity */}
+      {/* Recent Activity Placeholder */}
       <div className="p-8 rounded-2xl bg-white dark:bg-midnight-900 border border-stone-200 dark:border-midnight-800 shadow-sm">
         <h3 className="text-lg font-bold mb-4 text-stone-800 dark:text-white">
           System Status
