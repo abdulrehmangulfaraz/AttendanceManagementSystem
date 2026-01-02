@@ -3,6 +3,9 @@ import { AuthProvider } from "./context/AuthContext";
 import { ThemeProvider } from "./context/ThemeContext";
 import { ToastProvider } from "./context/ToastContext";
 import Login from "./pages/Login";
+import TeacherTimetable from "./pages/teacher/TeacherTimetable";
+import TeacherReports from "./pages/teacher/TeacherReports";
+import TeacherProfile from "./pages/teacher/TeacherProfile";
 
 // Layouts
 import AdminLayout from "./layouts/AdminLayout";
@@ -48,6 +51,9 @@ function App() {
                   path="class/:courseId/:sectionId"
                   element={<ClassManager />}
                 />
+                <Route path="timetable" element={<TeacherTimetable />} />
+                <Route path="reports" element={<TeacherReports />} />
+                <Route path="profile" element={<TeacherProfile />} />
               </Route>
             </Routes>
           </BrowserRouter>

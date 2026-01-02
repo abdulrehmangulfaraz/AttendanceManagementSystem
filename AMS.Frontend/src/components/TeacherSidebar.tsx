@@ -8,23 +8,23 @@ const TeacherSidebar = () => {
     {
       path: "/teacher",
       label: "My Classes",
-      icon: (
-        <svg
-          className="w-5 h-5"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth="2"
-            d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
-          />
-        </svg>
-      ),
+      icon: /* Class Icon */ <span className="text-xl">📚</span>,
     },
-    // Add Profile or other teacher links here if needed
+    {
+      path: "/teacher/timetable",
+      label: "My Timetable",
+      icon: /* Calendar Icon */ <span className="text-xl">📅</span>,
+    },
+    {
+      path: "/teacher/reports",
+      label: "Reports",
+      icon: /* Chart Icon */ <span className="text-xl">📊</span>,
+    },
+    {
+      path: "/teacher/profile",
+      label: "Profile",
+      icon: /* User Icon */ <span className="text-xl">👤</span>,
+    },
   ];
 
   return (
@@ -34,7 +34,7 @@ const TeacherSidebar = () => {
           AMS Teacher
         </h1>
       </div>
-      <nav className="p-4 space-y-1">
+      <nav className="p-4 space-y-2">
         {navItems.map((item) => (
           <Link
             key={item.path}

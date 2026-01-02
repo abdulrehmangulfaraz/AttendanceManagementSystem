@@ -118,5 +118,80 @@ namespace AMS.API.Controllers
 
             return Ok(attendanceList);
         }
+
+        // 5. Get My Timetable
+        [HttpGet("my-timetable")]
+        public async Task<IActionResult> GetMyTimetable()
+        {
+            var teacherId = int.Parse(User.FindFirst("id")?.Value ?? "0");
+
+            // Get courses assigned to teacher
+            var courseIds = await _context.TeacherAllocations
+                .Where(ta => ta.TeacherId == teacherId)
+                .Select(ta => ta.CourseId)
+                .ToListAsync();
+
+            // Fetch timetable entries for those courses
+            var timetable = await _context.TimetableEntries
+                .Include(t => t.Course)
+                .Include(t => t.Section)
+                .Where(t => courseIds.Contains((int)t.CourseId))
+                .Select(t => new
+                {
+                    t.Day,
+                    t.StartTime,
+                    t.EndTime,
+                    CourseName = t.Course.Name,
+                    SectionName = t.Section.Name,
+                    t.Room
+                })
+                .OrderBy(t => t.Day).ThenBy(t => t.StartTime)
+                .ToListAsync();
+
+            return Ok(timetable);
+        }
+
+        // 6. Get Attendance Report (Custom Date Range)
+        [HttpGet("reports")]
+        public async Task<IActionResult> GetAttendanceReport(
+            [FromQuery] int courseId,
+            [FromQuery] DateTime startDate,
+            [FromQuery] DateTime endDate)
+        {
+            // 1. Fetch raw attendance records for the range
+            var attendanceData = await _context.Attendances
+                .Include(a => a.Student)
+                .Where(a => a.CourseId == courseId &&
+                          a.Date.Date >= startDate.Date &&
+                          a.Date.Date <= endDate.Date)
+                .OrderBy(a => a.Date)
+                .ToListAsync();
+
+            // 2. Prepare Data for Chart (Grouped by Date)
+            var chartData = attendanceData
+                .GroupBy(a => a.Date.Date)
+                .Select(g => new
+                {
+                    Date = g.Key.ToString("yyyy-MM-dd"),
+                    Present = g.Count(x => x.Status == "Present"),
+                    Absent = g.Count(x => x.Status == "Absent")
+                })
+                .ToList();
+
+            // 3. Prepare Data for Table (Summary per Student)
+            var tableData = attendanceData
+                .GroupBy(a => a.StudentId)
+                .Select(g => new
+                {
+                    StudentName = g.First().Student?.Name ?? "Unknown",
+                    TotalPresent = g.Count(x => x.Status == "Present"),
+                    TotalAbsent = g.Count(x => x.Status == "Absent"),
+                    Percentage = (double)g.Count(x => x.Status == "Present") / g.Count() * 100
+                })
+                .OrderBy(x => x.StudentName)
+                .ToList();
+
+            return Ok(new { Chart = chartData, Table = tableData });
+        }
     }
 }
