@@ -10,7 +10,7 @@ namespace AMS.API.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    [Authorize(Roles = "Teacher")] // SECURITY: Only Teachers
+    [Authorize(Roles = "Teacher")]
     public class TeacherController : ControllerBase
     {
         private readonly ApplicationDbContext _context;
@@ -20,14 +20,60 @@ namespace AMS.API.Controllers
             _context = context;
         }
 
-        // 1. Mark Attendance
+        // 1. Get My Allocations (Dashboard Data)
+        [HttpGet("my-allocations")]
+        public async Task<IActionResult> GetMyAllocations()
+        {
+            // Extract Teacher ID from Token Claims
+            // Ensure your AuthController adds ClaimTypes.NameIdentifier with the User ID
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("id");
+            if (userIdClaim == null) return Unauthorized("User ID not found in token.");
+
+            int teacherId = int.Parse(userIdClaim.Value);
+
+            var allocations = await _context.TeacherAllocations
+                .Include(ta => ta.Course)
+                .Include(ta => ta.Section)
+                .Where(ta => ta.TeacherId == teacherId)
+                .Select(ta => new
+                {
+                    ta.Id,
+                    ta.CourseId,
+                    CourseName = ta.Course.Name,
+                    CourseCode = ta.Course.Code,
+                    ta.SectionId,
+                    SectionName = ta.Section.Name
+                })
+                .ToListAsync();
+
+            return Ok(allocations);
+        }
+
+        // 2. Get Students for a Class (To Mark Attendance)
+        [HttpGet("students/{courseId}/{sectionId}")]
+        public async Task<IActionResult> GetStudentsForClass(int courseId, int sectionId)
+        {
+            // We assume you have a StudentEnrollments table based on your migrations
+            // If strictly using User role without enrollment table, this query might need adjustment.
+            var students = await _context.StudentEnrollments
+                .Where(se => se.CourseId == courseId && se.SectionId == sectionId)
+                .Include(se => se.Student)
+                .Select(se => new
+                {
+                    se.StudentId,
+                    StudentName = se.Student.Name,
+                    StudentEmail = se.Student.Email
+                })
+                .ToListAsync();
+
+            return Ok(students);
+        }
+
+        // 3. Mark Attendance
         [HttpPost("mark-attendance")]
         public async Task<IActionResult> MarkAttendance(MarkAttendanceDto request)
         {
-            // Optional: Check if this Teacher is actually assigned to this Course/Section
-            // For now, we allow any teacher to mark for simplicity, or we can add that check later.
-
-            // Check if attendance already exists for this day to prevent duplicates
+            // Prevent duplicates
             var existingRecord = await _context.Attendances
                 .FirstOrDefaultAsync(a => a.StudentId == request.StudentId &&
                                           a.CourseId == request.CourseId &&
@@ -35,12 +81,10 @@ namespace AMS.API.Controllers
 
             if (existingRecord != null)
             {
-                // Update existing record
                 existingRecord.Status = request.IsPresent ? "Present" : "Absent";
             }
             else
             {
-                // Create new record
                 var attendance = new Attendance
                 {
                     StudentId = request.StudentId,
@@ -53,15 +97,15 @@ namespace AMS.API.Controllers
             }
 
             await _context.SaveChangesAsync();
-            return Ok("Attendance marked successfully.");
+            return Ok(new { message = "Attendance marked successfully." });
         }
 
-        // 2. View Attendance for a specific Course & Section
+        // 4. View Attendance History
         [HttpGet("attendance/{courseId}/{sectionId}")]
         public async Task<IActionResult> GetClassAttendance(int courseId, int sectionId)
         {
             var attendanceList = await _context.Attendances
-                .Include(a => a.Student) // Load Student Name
+                .Include(a => a.Student)
                 .Where(a => a.CourseId == courseId && a.SectionId == sectionId)
                 .OrderByDescending(a => a.Date)
                 .Select(a => new AttendanceRecordDto
