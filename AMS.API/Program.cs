@@ -50,6 +50,8 @@ builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
 
+
+
 // --- NEW: Auto-Migration for SQLite on Render ---
 // This creates the database file automatically when the server starts
 using (var scope = app.Services.CreateScope())
@@ -58,12 +60,17 @@ using (var scope = app.Services.CreateScope())
     try
     {
         var context = services.GetRequiredService<ApplicationDbContext>();
-        context.Database.Migrate(); // Applies pending migrations
+
+        // 1. Create DB if not exists (handling SQLite on Render)
+        context.Database.Migrate();
+
+        // 2. Seed Data
+        DbInitializer.Initialize(context);
     }
     catch (Exception ex)
     {
         var logger = services.GetRequiredService<ILogger<Program>>();
-        logger.LogError(ex, "An error occurred creating the DB.");
+        logger.LogError(ex, "An error occurred creating/seeding the DB.");
     }
 }
 
