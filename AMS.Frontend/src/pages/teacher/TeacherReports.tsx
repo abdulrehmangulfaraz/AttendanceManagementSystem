@@ -28,11 +28,11 @@ const TeacherReports = () => {
 
   // State
   const [allocations, setAllocations] = useState<any[]>([]);
-  // We store the allocation ID to easily find the selected object
   const [selectedAllocationId, setSelectedAllocationId] = useState<
     number | string
   >("");
 
+  // Default: Last 30 days
   const [startDate, setStartDate] = useState(
     new Date(new Date().setDate(new Date().getDate() - 30))
       .toISOString()
@@ -60,19 +60,19 @@ const TeacherReports = () => {
   }, [selectedAllocationId, startDate, endDate]);
 
   const fetchReport = async () => {
-    // Find the actual IDs based on the selected Allocation ID
     const alloc = allocations.find((a) => a.id == selectedAllocationId);
     if (!alloc) return;
 
     setLoading(true);
     try {
-      // Pass both courseId and sectionId
       const res = await api.get(
         `/Teacher/reports?courseId=${alloc.courseId}&sectionId=${alloc.sectionId}&startDate=${startDate}&endDate=${endDate}`
       );
       setReportData(res.data);
 
-      const cData = res.data.Chart || [];
+      // FIX: Access properties using lowercase (chart/table) to match API default
+      const cData = res.data.chart || [];
+
       setChartData({
         labels: cData.map((d: any) => d.date),
         datasets: [
@@ -116,10 +116,13 @@ const TeacherReports = () => {
       doc.addImage(chartImg, "PNG", 14, 40, 180, 80);
     }
 
+    // FIX: Access properties using lowercase (table)
+    const tableData = reportData.table || [];
+
     autoTable(doc, {
       startY: 130,
       head: [["Student Name", "Present", "Absent", "Percentage"]],
-      body: (reportData.Table || []).map((row: any) => [
+      body: tableData.map((row: any) => [
         row.studentName,
         row.totalPresent,
         row.totalAbsent,
@@ -228,7 +231,8 @@ const TeacherReports = () => {
             </tr>
           </thead>
           <tbody className="divide-y divide-stone-100 dark:divide-midnight-800">
-            {reportData?.Table?.map((row: any, idx: number) => (
+            {/* FIX: Access properties using lowercase (table) */}
+            {(reportData?.table || []).map((row: any, idx: number) => (
               <tr
                 key={idx}
                 className="hover:bg-stone-50 dark:hover:bg-midnight-800/50"
@@ -258,7 +262,7 @@ const TeacherReports = () => {
               </tr>
             ))}
             {!loading &&
-              (!reportData?.Table || reportData.Table.length === 0) && (
+              (!reportData?.table || reportData.table.length === 0) && (
                 <tr>
                   <td colSpan={4} className="p-8 text-center text-stone-500">
                     No student records found for this period.
