@@ -1,11 +1,14 @@
 import axios from 'axios';
 
-// 1. Set the Base URL (Matches your .NET launchSettings.json)
+// Use environment variable for the API URL
+// If VITE_API_URL is set (in Vercel), use it. Otherwise use localhost.
+const baseURL = import.meta.env.VITE_API_URL || 'http://localhost:5047/api';
+
 const api = axios.create({
-    baseURL: 'http://localhost:5047/api' 
+    baseURL: baseURL
 });
 
-// 2. Automatically attach JWT Token to every request
+// Automatically attach JWT Token to every request
 api.interceptors.request.use((config) => {
     const token = localStorage.getItem('token');
     if (token) {
