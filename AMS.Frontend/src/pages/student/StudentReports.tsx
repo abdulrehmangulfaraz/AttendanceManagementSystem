@@ -10,6 +10,9 @@ import {
   Tooltip,
   Legend,
 } from "chart.js";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
+import { useToast } from "../../context/ToastContext"; // Assuming you have this context
 
 ChartJS.register(
   CategoryScale,
@@ -21,6 +24,7 @@ ChartJS.register(
 );
 
 const StudentReports = () => {
+  const { showToast } = useToast();
   const [startDate, setStartDate] = useState(
     new Date(new Date().setDate(new Date().getDate() - 30))
       .toISOString()
@@ -50,6 +54,68 @@ const StudentReports = () => {
     }
   };
 
+  const downloadPDF = () => {
+    if (!data || !data.records) {
+      showToast("No data to download", "error");
+      return;
+    }
+
+    const doc = new jsPDF();
+
+    // 1. Header
+    doc.setFontSize(18);
+    doc.text("My Attendance Report", 14, 20);
+
+    doc.setFontSize(12);
+    doc.text(`Period: ${startDate} to ${endDate}`, 14, 30);
+
+    // 2. Add Chart Snapshot
+    const canvas = document.querySelector("canvas");
+    if (canvas) {
+      const chartImg = canvas.toDataURL("image/png");
+      doc.addImage(chartImg, "PNG", 14, 40, 180, 80);
+    }
+
+    // 3. Summary Section in PDF
+    let yPos = 130;
+    doc.setFontSize(14);
+    doc.text("Course Summary", 14, yPos);
+
+    // We can use autoTable for the summary too
+    autoTable(doc, {
+      startY: yPos + 5,
+      head: [["Course", "Present", "Absent", "%"]],
+      body: (data.summary || []).map((s: any) => [
+        s.courseName,
+        s.present,
+        s.absent,
+        `${s.percentage.toFixed(1)}%`,
+      ]),
+      theme: "striped",
+      headStyles: { fillColor: [79, 70, 229] }, // Indigo color to match student theme
+    });
+
+    // 4. Detailed Records Table
+    // @ts-ignore
+    const finalY = doc.lastAutoTable.finalY + 15;
+
+    doc.text("Detailed History", 14, finalY);
+
+    autoTable(doc, {
+      startY: finalY + 5,
+      head: [["Date", "Course", "Status"]],
+      body: (data.records || []).map((r: any) => [
+        new Date(r.date).toLocaleDateString(),
+        r.courseName,
+        r.status,
+      ]),
+      theme: "grid",
+      headStyles: { fillColor: [60, 60, 60] },
+    });
+
+    doc.save(`My_Attendance_${startDate}_${endDate}.pdf`);
+  };
+
   // Chart Data Preparation
   const chartData = {
     labels: data?.summary?.map((s: any) => s.courseName) || [],
@@ -72,7 +138,7 @@ const StudentReports = () => {
         <h2 className="text-2xl font-bold text-stone-800 dark:text-white">
           Attendance Report
         </h2>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2 items-center">
           <input
             type="date"
             value={startDate}
@@ -85,6 +151,14 @@ const StudentReports = () => {
             onChange={(e) => setEndDate(e.target.value)}
             className="p-2 rounded border dark:bg-midnight-900 dark:text-white dark:border-midnight-800"
           />
+
+          <button
+            onClick={downloadPDF}
+            disabled={loading || !data}
+            className="px-4 py-2 bg-indigo-600 text-white font-bold rounded hover:bg-indigo-700 transition shadow-lg shadow-indigo-500/30 disabled:opacity-50"
+          >
+            Download PDF
+          </button>
         </div>
       </div>
 
