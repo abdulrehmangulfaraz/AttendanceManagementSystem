@@ -19,6 +19,27 @@ namespace AMS.API.Controllers
             _context = context;
         }
 
+        // --- NEW: Dashboard Stats Endpoint ---
+        [HttpGet("stats")]
+        public async Task<IActionResult> GetDashboardStats()
+        {
+            var totalUsers = await _context.Users.CountAsync();
+            var activeSessions = await _context.AcademicSessions.CountAsync(s => s.IsActive);
+            var totalCourses = await _context.Courses.CountAsync();
+
+            // Calculate percentage growth (simulated logic or real if you track created dates)
+            // For now, we return the raw counts
+            return Ok(new
+            {
+                totalUsers,
+                activeSessions,
+                totalCourses
+            });
+        }
+
+        // ... [KEEP ALL YOUR OTHER EXISTING ENDPOINTS BELOW: users, sessions, courses, etc.] ...
+        // (Do not delete the other methods you already have!)
+
         // --- 1. MANAGE USERS ---
         [HttpGet("users")]
         public async Task<IActionResult> GetAllUsers()
@@ -93,7 +114,6 @@ namespace AMS.API.Controllers
         [HttpGet("sections")]
         public async Task<IActionResult> GetAllSections()
         {
-            // Include Session Name for readability
             var sections = await _context.Sections.Include(s => s.AcademicSession).Select(s => new
             {
                 s.Id,
@@ -122,7 +142,7 @@ namespace AMS.API.Controllers
             return Ok("Section deleted");
         }
 
-        // --- 5. ASSIGNMENTS (ALLOCATIONS) ---
+        // --- 5. ASSIGNMENTS ---
         [HttpPost("assign-teacher")]
         public async Task<IActionResult> AssignTeacher(AssignTeacherDto request)
         {
@@ -141,7 +161,6 @@ namespace AMS.API.Controllers
             return Ok("Student enrolled");
         }
 
-        // View all assignments (New)
         [HttpGet("assignments")]
         public async Task<IActionResult> GetAssignments()
         {
@@ -156,7 +175,7 @@ namespace AMS.API.Controllers
             return Ok(new { teachers, students });
         }
 
-        // --- TIMETABLE MANAGEMENT ---
+        // --- TIMETABLE ---
         [HttpGet("timetable/{sectionId}")]
         public async Task<IActionResult> GetTimetable(int sectionId)
         {
@@ -171,7 +190,6 @@ namespace AMS.API.Controllers
                     t.StartTime,
                     t.EndTime,
                     t.Room,
-                    // If Course is null, return "Break", otherwise return Course Name
                     CourseName = t.Course == null ? "Break" : t.Course.Name,
                     IsBreak = t.CourseId == null
                 })
@@ -182,7 +200,6 @@ namespace AMS.API.Controllers
         [HttpPost("timetable")]
         public async Task<IActionResult> AddTimetableEntry(TimetableEntry entry)
         {
-            // Basic conflict check
             bool conflict = await _context.TimetableEntries.AnyAsync(t =>
                 t.SectionId == entry.SectionId && t.Day == entry.Day &&
                 ((entry.StartTime >= t.StartTime && entry.StartTime < t.EndTime) ||
