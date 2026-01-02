@@ -6,6 +6,10 @@ import Login from "./pages/Login";
 import TeacherTimetable from "./pages/teacher/TeacherTimetable";
 import TeacherReports from "./pages/teacher/TeacherReports";
 import TeacherProfile from "./pages/teacher/TeacherProfile";
+import StudentLayout from "./layouts/StudentLayout";
+import StudentDashboard from "./pages/student/StudentDashboard";
+import StudentReports from "./pages/student/StudentReports";
+import StudentProfile from "./pages/student/StudentProfile";
 
 // Layouts
 import AdminLayout from "./layouts/AdminLayout";
@@ -54,6 +58,12 @@ function App() {
                 <Route path="timetable" element={<TeacherTimetable />} />
                 <Route path="reports" element={<TeacherReports />} />
                 <Route path="profile" element={<TeacherProfile />} />
+              </Route>
+
+              <Route path="/student" element={<StudentLayout />}>
+                <Route index element={<StudentDashboard />} />
+                <Route path="reports" element={<StudentReports />} />
+                <Route path="profile" element={<StudentProfile />} />
               </Route>
             </Routes>
           </BrowserRouter>
